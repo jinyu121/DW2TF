@@ -16,7 +16,7 @@ from reader.cfg_reader import CFGReader
 from reader.weights_reader import WeightsReader
 
 
-def parse(cfg, weights):
+def parse_net(cfg, weights):
     net = None
     counters = {}
     stack = []
@@ -57,37 +57,40 @@ def parse(cfg, weights):
                                           filters=filters,
                                           weight_size=weight_size,
                                           batch_normalize=batch_normalize)
-            weights = weights.reshape(
-                C, filters, size, size).transpose([2, 3, 1, 0])
+            weights = weights.reshape(C, filters, size, size).transpose([2, 3, 1, 0])
 
-            conv_args = dict(
-                num_outputs=filters,
-                kernel_size=size,
-                stride=stride,
-                activation_fn=activation,
-                weights_initializer=tf.initializers.constant(weights),
-                biases_initializer=tf.initializers.constant(biases),
-                scope="{}{}{}".format(args.prefix, "/convolutional", counters[layer['name']])
-            )
+            conv_args = {
+                "num_outputs": filters,
+                "kernel_size": size,
+                "stride": stride,
+                "activation_fn": activation,
+                "weights_initializer": tf.initializers.constant(weights),
+                "biases_initializer": tf.initializers.constant(biases),
+                "scope": "{}{}{}".format(args.prefix, "/convolutional", counters[layer['name']])
+            }
+
             if batch_normalize:
                 conv_args.update({
                     "normalizer_fn": slim.batch_norm,
-                    "normalizer_params": {"param_initializers": {
-                        "gamma": tf.initializers.constant(scales),
-                        "moving_mean": tf.initializers.constant(rolling_mean),
-                        "moving_variance": tf.initializers.constant(rolling_variance),
-                    }},
+                    "normalizer_params": {
+                        "param_initializers": {
+                            "gamma": tf.initializers.constant(scales),
+                            "moving_mean": tf.initializers.constant(rolling_mean),
+                            "moving_variance": tf.initializers.constant(rolling_variance),
+                        }
+                    },
                 })
 
             net = slim.conv2d(net, **conv_args)
 
         elif "[maxpool]" == layer['name']:
-            size = int(layer['size'])
-            stride = int(layer['stride'])
-            net = slim.max_pool2d(net,
-                                  kernel_size=size,
-                                  stride=stride,
-                                  scope="{}{}{}".format(args.prefix, "/maxpool", counters[layer['name']]))
+            pool_args = {
+                "kernel_size": int(layer['size']),
+                "stride": int(layer['stride']),
+                "scope": "{}{}{}".format(args.prefix, "/maxpool", counters[layer['name']])
+            }
+
+            net = slim.max_pool2d(net, **pool_args)
 
         elif "[route]" == layer['name']:
             if not isinstance(layer["layers"], list):
@@ -97,11 +100,13 @@ def parse(cfg, weights):
             net = tf.concat(nets, axis=-1)
 
         elif "[reorg]" == layer['name']:
-            stride = int(layer['stride'])
-            net = reorg_layer(net, stride)
+            reorg_args = {
+                "stride": int(layer['stride'])
+            }
+            net = reorg_layer(net, **reorg_args)
 
         else:
-            print("Ignore: ", layer)
+            print("=> Ignore: ", layer)
 
         stack.append(net)
         print(ith, net)
@@ -110,7 +115,7 @@ def parse(cfg, weights):
 def main(args):
     output_file = os.path.join(args.output, os.path.splitext(
         os.path.split(args.cfg)[-1])[0] + ".ckpt")
-    parse(args.cfg, args.weights)
+    parse_net(args.cfg, args.weights)
     saver = tf.train.Saver(slim.get_model_variables())
 
     with tf.Session() as sess:

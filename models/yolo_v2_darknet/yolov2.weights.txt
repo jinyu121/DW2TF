@@ -1,0 +1,3 @@
+https://pjreddie.com/media/files/yolov2.weights
+(or)
+https://drive.google.com/uc?export=view&id=1CmGujLjQXCA8GaoyXA2AnVrjnoHfDMdW

@@ -1,6 +1,6 @@
 # DW2TF: Darknet Weights to TensorFlow
 
-This is a simple convector which converts Darknet weights file (`.weights`) to Tensorflow weights file (`.ckpt`).
+This is a simple converter which converts Darknet weights file (`.weights`) to Tensorflow weights file (`.ckpt`).
 
 ## Use it
 

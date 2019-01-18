@@ -62,7 +62,7 @@ def cfg_convolutional(B, H, W, C, net, param, weights_walker, stack, output_inde
 
     if batch_normalize:
         batch_norm_args = {
-            "fused": False,
+            "fused": True,
             "trainable": False
         }
 
@@ -73,7 +73,7 @@ def cfg_convolutional(B, H, W, C, net, param, weights_walker, stack, output_inde
                 "moving_variance_initializer": tf.initializers.constant(rolling_variance)
             })
 
-        net = tf.layers.batch_normalization(net, name=scope, **batch_norm_args)
+        net = tf.layers.batch_normalization(net, name=scope+'/FusedBatchNorm', **batch_norm_args)
 
     return net
 

@@ -5,7 +5,6 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-import tensorflow.contrib.slim as slim
 
 from layer.reorg_layer import reorg_layer
 
@@ -15,10 +14,10 @@ _activation_dict = {
 }
 
 
-# cfg_layerName(B, H, W, C, net, param, weights_walker, stack, scope=None):
+# cfg_layerName(B, H, W, C, net, param, weights_walker, stack, output_index, scope, const_inits, verbose):
 #    pass
 
-def cfg_net(B, H, W, C, net, param, weights_walker, stack, scope, const_inits, verbose):
+def cfg_net(B, H, W, C, net, param, weights_walker, stack, output_index, scope, const_inits, verbose):
     width = int(param["width"])
     height = int(param["height"])
     channels = int(param["channels"])
@@ -26,11 +25,12 @@ def cfg_net(B, H, W, C, net, param, weights_walker, stack, scope, const_inits, v
     return net
 
 
-def cfg_convolutional(B, H, W, C, net, param, weights_walker, stack, scope, const_inits, verbose):
+def cfg_convolutional(B, H, W, C, net, param, weights_walker, stack, output_index, scope, const_inits, verbose):
     batch_normalize = 'batch_normalize' in param
     size = int(param['size'])
     filters = int(param['filters'])
     stride = int(param['stride'])
+    pad = 'same' if param['pad'] == '1' else 'valid'
     activation = None
     weight_size = C * filters * size * size
 
@@ -45,49 +45,50 @@ def cfg_convolutional(B, H, W, C, net, param, weights_walker, stack, scope, cons
     weights = weights.reshape(C, filters, size, size).transpose([2, 3, 1, 0])
 
     conv_args = {
-        "num_outputs": filters,
+        "filters": filters,
         "kernel_size": size,
-        "stride": stride,
-        "activation_fn": activation
+        "strides": stride,
+        "activation": activation,
+        "padding": pad
     }
 
     if const_inits:
         conv_args.update({
-            "weights_initializer": tf.initializers.constant(weights),
-            "biases_initializer": tf.initializers.constant(biases)
+            "kernel_initializer": tf.initializers.constant(weights),
+            "bias_initializer": tf.initializers.constant(biases)
         })
-        
+
+    net = tf.layers.conv2d(net, name=scope, **conv_args)
+
     if batch_normalize:
-        conv_args.update({
-            "normalizer_fn": slim.batch_norm
-        })
+        batch_norm_args = {
+            "fused": False,
+            "trainable": False
+        }
 
         if const_inits:
-            conv_args.update({
-                "normalizer_params": {
-                    "param_initializers": {
-                        "gamma": tf.initializers.constant(scales),
-                        "moving_mean": tf.initializers.constant(rolling_mean),
-                        "moving_variance": tf.initializers.constant(rolling_variance)
-                    }
-                }
-        })
+            batch_norm_args.update({
+                "gamma_initializer": tf.initializers.constant(scales),
+                "moving_mean_initializer": tf.initializers.constant(rolling_mean),
+                "moving_variance_initializer": tf.initializers.constant(rolling_variance)
+            })
 
-    net = slim.conv2d(net, scope=scope, **conv_args)
+        net = tf.layers.batch_normalization(net, name=scope, **batch_norm_args)
+
     return net
 
 
-def cfg_maxpool(B, H, W, C, net, param, weights_walker, stack, scope, const_inits, verbose):
+def cfg_maxpool(B, H, W, C, net, param, weights_walker, stack, output_index, scope, const_inits, verbose):
     pool_args = {
-        "kernel_size": int(param['size']),
-        "stride": int(param['stride'])
+        "pool_size": int(param['size']),
+        "strides": int(param['stride'])
     }
 
-    net = slim.max_pool2d(net, scope=scope, **pool_args)
+    net = tf.layers.max_pooling2d(net, name=scope, **pool_args)
     return net
 
 
-def cfg_route(B, H, W, C, net, param, weights_walker, stack, scope, const_inits, verbose):
+def cfg_route(B, H, W, C, net, param, weights_walker, stack, output_index, scope, const_inits, verbose):
     if not isinstance(param["layers"], list):
         param["layers"] = [param["layers"]]
     net_index = [int(x) for x in param["layers"]]
@@ -97,7 +98,7 @@ def cfg_route(B, H, W, C, net, param, weights_walker, stack, scope, const_inits,
     return net
 
 
-def cfg_reorg(B, H, W, C, net, param, weights_walker, stack, scope, const_inits, verbose):
+def cfg_reorg(B, H, W, C, net, param, weights_walker, stack, output_index, scope, const_inits, verbose):
     reorg_args = {
         "stride": int(param['stride'])
     }
@@ -106,7 +107,34 @@ def cfg_reorg(B, H, W, C, net, param, weights_walker, stack, scope, const_inits,
     return net
 
 
-def cfg_ignore(B, H, W, C, net, param, weights_walker, stack, scope, const_inits, verbose):
+def cfg_shortcut(B, H, W, C, net, param, weights_walker, stack, output_index, scope, const_inits, verbose):
+    index = int(param['from'])
+    activation = param['activation']
+    assert activation == 'linear'
+
+    from_layer = stack[index]
+    net = tf.add(net, from_layer, name=scope)
+    return net
+
+
+def cfg_yolo(B, H, W, C, net, param, weights_walker, stack, output_index, scope, const_inits, verbose):
+    output_index.append(len(stack) - 1)
+    return net
+
+
+def cfg_upsample(B, H, W, C, net, param, weights_walker, stack, output_index, scope, const_inits, verbose):
+    stride = int(param['stride'])
+    assert stride == 2
+
+    net = tf.image.resize_nearest_neighbor(net, (H * stride, W * stride), name=scope)
+    return net
+
+
+def cfg_region(B, H, W, C, net, param, weights_walker, stack, output_index, scope, const_inits, verbose):
+    pass
+
+
+def cfg_ignore(B, H, W, C, net, param, weights_walker, stack, output_index, scope, const_inits, verbose):
     if verbose:
         print("=> Ignore: ", param)
 
@@ -118,11 +146,15 @@ _cfg_layer_dict = {
     "convolutional": cfg_convolutional,
     "maxpool": cfg_maxpool,
     "route": cfg_route,
-    "reorg": cfg_reorg
+    "reorg": cfg_reorg,
+    "shortcut": cfg_shortcut,
+    "yolo": cfg_yolo,
+    "upsample": cfg_upsample,
+    "region": cfg_region
 }
 
 
-def get_cfg_layer(net, layer_name, param, weights_walker, stack, scope=None, const_inits=True, verbose=True):
+def get_cfg_layer(net, layer_name, param, weights_walker, stack, output_index, scope=None, const_inits=True, verbose=True):
     B, H, W, C = [None, None, None, None] if net is None else net.shape.as_list()
-    layer = _cfg_layer_dict.get(layer_name, cfg_ignore)(B, H, W, C, net, param, weights_walker, stack, scope, const_inits, verbose)
+    layer = _cfg_layer_dict.get(layer_name, cfg_ignore)(B, H, W, C, net, param, weights_walker, stack, output_index, scope, const_inits, verbose)
     return layer

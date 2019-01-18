@@ -8,7 +8,6 @@ from argparse import ArgumentParser
 
 import os
 import tensorflow as tf
-import tensorflow.contrib.slim as slim
 
 from util.cfg_layer import get_cfg_layer
 from util.reader import WeightsReader, CFGReader
@@ -20,6 +19,7 @@ def parse_net(num_layers, cfg, weights, const_inits=True, verbose=True):
     stack = []
     cfg_walker = CFGReader(cfg)
     weights_walker = WeightsReader(weights)
+    output_index = []
 
     for ith, layer in enumerate(cfg_walker):
         if ith > num_layers and num_layers > 0:
@@ -28,12 +28,15 @@ def parse_net(num_layers, cfg, weights, const_inits=True, verbose=True):
         counters.setdefault(layer_name, 0)
         counters[layer_name] += 1
         scope = "{}{}{}".format(args.prefix, layer['name'], counters[layer_name])
-        net = get_cfg_layer(net, layer_name, layer, weights_walker, stack, scope=scope,
-                            const_inits=const_inits, verbose=verbose)
+        net = get_cfg_layer(net, layer_name, layer, weights_walker, stack, output_index,
+                            scope=scope, const_inits=const_inits, verbose=verbose)
         stack.append(net)
         if verbose:
             print(ith, net)
+            for ind in output_index:
+                print("=> Output layer: ", stack[ind])
 
+    return output_index
 
 def main(args):
     ckpt_path = os.path.join(args.output, os.path.splitext(os.path.split(args.cfg)[-1])[0] + ".ckpt")
@@ -48,7 +51,7 @@ def main(args):
     parse_net(args.layers, args.cfg, args.weights)
     graph = tf.get_default_graph()
 
-    saver = tf.train.Saver(slim.get_model_variables())
+    saver = tf.train.Saver(tf.global_variables())
     with tf.Session(graph=graph) as sess:
         sess.run(tf.global_variables_initializer())
         saver.save(sess, ckpt_path, write_meta_graph=False)

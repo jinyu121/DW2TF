@@ -33,8 +33,10 @@ def parse_net(num_layers, cfg, weights, const_inits=True, verbose=True):
         stack.append(net)
         if verbose:
             print(ith, net)
-            for ind in output_index:
-                print("=> Output layer: ", stack[ind])
+
+    if verbose:        
+        for ind in output_index:
+            print("=> Output layer: ", stack[ind])
 
     return output_index
 

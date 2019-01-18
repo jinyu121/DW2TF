@@ -58,22 +58,29 @@ def cfg_convolutional(B, H, W, C, net, param, weights_walker, stack, output_inde
             "bias_initializer": tf.initializers.constant(biases)
         })
 
+    if batch_normalize:
+        conv_args.update({
+            "use_bias": False
+        })
+
     net = tf.layers.conv2d(net, name=scope, **conv_args)
 
     if batch_normalize:
         batch_norm_args = {
             "fused": True,
-            "trainable": False
+            "trainable": True,
+            "training": True 
         }
 
         if const_inits:
             batch_norm_args.update({
+                "beta_initializer": tf.initializers.constant(biases),
                 "gamma_initializer": tf.initializers.constant(scales),
                 "moving_mean_initializer": tf.initializers.constant(rolling_mean),
                 "moving_variance_initializer": tf.initializers.constant(rolling_variance)
             })
 
-        net = tf.layers.batch_normalization(net, name=scope+'/FusedBatchNorm', **batch_norm_args)
+        net = tf.layers.batch_normalization(net, name=scope+'/BatchNorm', **batch_norm_args)
 
     return net
 

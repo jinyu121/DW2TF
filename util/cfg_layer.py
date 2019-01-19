@@ -8,9 +8,15 @@ import tensorflow as tf
 
 from layer.reorg_layer import reorg_layer
 
+# From Darknet
+_LEAKY_RELU_ALPHA = 0.1
+_BATCH_NORM_MOMENTUM = 0.9
+_BATCH_NORM_EPSILON = 1e-05
+
+
 _activation_dict = {
-    'leaky': tf.nn.leaky_relu,
-    'relu': tf.nn.relu
+    'leaky': lambda x, y: tf.nn.leaky_relu(x, name=y, alpha=_LEAKY_RELU_ALPHA),
+    'relu': lambda x, y: tf.nn.relu(x, name=y)
 }
 
 
@@ -48,7 +54,7 @@ def cfg_convolutional(B, H, W, C, net, param, weights_walker, stack, output_inde
         "filters": filters,
         "kernel_size": size,
         "strides": stride,
-        "activation": activation,
+        "activation": None,
         "padding": pad
     }
 
@@ -67,9 +73,11 @@ def cfg_convolutional(B, H, W, C, net, param, weights_walker, stack, output_inde
 
     if batch_normalize:
         batch_norm_args = {
+            "momentum": _BATCH_NORM_MOMENTUM,
+            "epsilon": _BATCH_NORM_EPSILON,
             "fused": True,
             "trainable": True,
-            "training": True 
+            "training": True
         }
 
         if const_inits:
@@ -81,6 +89,9 @@ def cfg_convolutional(B, H, W, C, net, param, weights_walker, stack, output_inde
             })
 
         net = tf.layers.batch_normalization(net, name=scope+'/BatchNorm', **batch_norm_args)
+
+    if activation:
+        net = activation(net, scope+'/Activation')
 
     return net
 
@@ -137,10 +148,6 @@ def cfg_upsample(B, H, W, C, net, param, weights_walker, stack, output_index, sc
     return net
 
 
-def cfg_region(B, H, W, C, net, param, weights_walker, stack, output_index, scope, const_inits, verbose):
-    pass
-
-
 def cfg_ignore(B, H, W, C, net, param, weights_walker, stack, output_index, scope, const_inits, verbose):
     if verbose:
         print("=> Ignore: ", param)
@@ -156,8 +163,7 @@ _cfg_layer_dict = {
     "reorg": cfg_reorg,
     "shortcut": cfg_shortcut,
     "yolo": cfg_yolo,
-    "upsample": cfg_upsample,
-    "region": cfg_region
+    "upsample": cfg_upsample
 }
 
 

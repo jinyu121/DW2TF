@@ -38,7 +38,6 @@ def parse_net(num_layers, cfg, weights, const_inits=True, verbose=True):
         for ind in output_index:
             print("=> Output layer: ", stack[ind])
 
-    return output_index
 
 def main(args):
     ckpt_path = os.path.join(args.output, os.path.splitext(os.path.split(args.cfg)[-1])[0] + ".ckpt")

@@ -50,7 +50,7 @@ def cfg_convolutional(B, H, W, C, net, param, weights_walker, stack, output_inde
                                   filters=filters,
                                   weight_size=weight_size,
                                   batch_normalize=batch_normalize)
-    weights = weights.reshape(C, filters, size, size).transpose([2, 3, 1, 0])
+    weights = weights.reshape(filters, C, size, size).transpose([2, 3, 1, 0])
 
     conv_args = {
         "filters": filters,
@@ -62,8 +62,8 @@ def cfg_convolutional(B, H, W, C, net, param, weights_walker, stack, output_inde
 
     if const_inits:
         conv_args.update({
-            "kernel_initializer": tf.initializers.constant(weights),
-            "bias_initializer": tf.initializers.constant(biases)
+            "kernel_initializer": tf.initializers.constant(weights, verify_shape=True),
+            "bias_initializer": tf.initializers.constant(biases, verify_shape=True)
         })
 
     if batch_normalize:
@@ -84,10 +84,10 @@ def cfg_convolutional(B, H, W, C, net, param, weights_walker, stack, output_inde
 
         if const_inits:
             batch_norm_args.update({
-                "beta_initializer": tf.initializers.constant(biases),
-                "gamma_initializer": tf.initializers.constant(scales),
-                "moving_mean_initializer": tf.initializers.constant(rolling_mean),
-                "moving_variance_initializer": tf.initializers.constant(rolling_variance)
+                "beta_initializer": tf.initializers.constant(biases, verify_shape=True),
+                "gamma_initializer": tf.initializers.constant(scales, verify_shape=True),
+                "moving_mean_initializer": tf.initializers.constant(rolling_mean, verify_shape=True),
+                "moving_variance_initializer": tf.initializers.constant(rolling_variance, verify_shape=True)
             })
 
         net = tf.layers.batch_normalization(net, name=scope+'/BatchNorm', **batch_norm_args)

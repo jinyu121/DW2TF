@@ -9,33 +9,13 @@ import os
 import tensorflow as tf
 
 
-def int_feature(value):
-    if not isinstance(value, list):
-        value = [value]
-    return tf.train.Feature(int64_list=tf.train.Int64List(value=value))
-
-
-def float_feature(value):
-    if not isinstance(value, list):
-        value = [value]
-    return tf.train.Feature(float_list=tf.train.FloatList(value=value))
-
-
-def bytes_feature(value):
-    if not isinstance(value, list):
-        value = [value]
-    return tf.train.Feature(bytes_list=tf.train.BytesList(value=value))
-
-
-def numpy_feature(value):
-    assert isinstance(value, np.ndarray), "Value must be a `numpy.ndarray` instance"
-    return bytes_feature(value.tobytes())
-
-
 class WeightsReader:
     """
     YOLO .weights file reader
     incremental reader of float32 binary files
+
+    Reference:
+    https://github.com/thtrieu/darkflow/blob/b2aee0000cd2a956b9f1de6dbfef94d53158b7d8/darkflow/utils/loader.py#L107-L138
     """
 
     def __init__(self, path):
@@ -63,7 +43,8 @@ class WeightsReader:
         )
 
         self.offset = end_point
-        self.eof = end_point == self.size
+        if end_point == self.size:
+            self.eof = True
         return float32_1d_array
 
     def get_weight_convolutional(self, filters, weight_size, batch_normalize=False):

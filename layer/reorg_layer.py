@@ -5,7 +5,10 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-from util.util import none_to_m1
+
+
+def none_to_m1(x):
+    return x if x is not None else -1
 
 
 def reorg_layer(net, stride=2, name='reorg'):

@@ -8,18 +8,18 @@ from argparse import ArgumentParser
 
 import os
 import tensorflow as tf
-import tensorflow.contrib.slim as slim
 
 from util.cfg_layer import get_cfg_layer
 from util.reader import WeightsReader, CFGReader
 
 
-def parse_net(num_layers, cfg, weights, const_inits=True, verbose=True):
+def parse_net(num_layers, cfg, weights, training=False, const_inits=True, verbose=True):
     net = None
     counters = {}
     stack = []
     cfg_walker = CFGReader(cfg)
     weights_walker = WeightsReader(weights)
+    output_index = []
 
     for ith, layer in enumerate(cfg_walker):
         if ith > num_layers and num_layers > 0:
@@ -28,11 +28,15 @@ def parse_net(num_layers, cfg, weights, const_inits=True, verbose=True):
         counters.setdefault(layer_name, 0)
         counters[layer_name] += 1
         scope = "{}{}{}".format(args.prefix, layer['name'], counters[layer_name])
-        net = get_cfg_layer(net, layer_name, layer, weights_walker, stack, scope=scope,
-                            const_inits=const_inits, verbose=verbose)
+        net = get_cfg_layer(net, layer_name, layer, weights_walker, stack, output_index, scope,
+                            training=training, const_inits=const_inits, verbose=verbose)
         stack.append(net)
         if verbose:
             print(ith, net)
+
+    if verbose:        
+        for ind in output_index:
+            print("=> Output layer: ", stack[ind])
 
 
 def main(args):
@@ -45,10 +49,10 @@ def main(args):
     # graph.pb or graph.meta is huge (contains weights).
     # ----------------------------------------------------------
     tf.reset_default_graph()
-    parse_net(args.layers, args.cfg, args.weights)
+    parse_net(args.layers, args.cfg, args.weights, args.training)
     graph = tf.get_default_graph()
 
-    saver = tf.train.Saver(slim.get_model_variables())
+    saver = tf.train.Saver(tf.global_variables())
     with tf.Session(graph=graph) as sess:
         sess.run(tf.global_variables_initializer())
         saver.save(sess, ckpt_path, write_meta_graph=False)
@@ -58,7 +62,7 @@ def main(args):
     # from previous .ckpt into the new (compact) graph.
     # ----------------------------------------------------------
     tf.reset_default_graph()
-    parse_net(args.layers, args.cfg, args.weights, const_inits=False, verbose=False)
+    parse_net(args.layers, args.cfg, args.weights, args.training, const_inits=False, verbose=False)
     graph = tf.get_default_graph()
 
     with tf.gfile.GFile(pb_path, 'wb') as f:
@@ -96,6 +100,7 @@ if __name__ == "__main__":
     parser.add_argument('--prefix', default='yolov2/', help='Import scope prefix')
     parser.add_argument('--layers', default=0, help='How many layers, 0 means all')
     parser.add_argument('--gpu', '-g', default='0', help='GPU')
+    parser.add_argument('--training', dest='training', action='store_true', help='Save training mode graph')
     args = parser.parse_args()
 
     # Set GPU to use

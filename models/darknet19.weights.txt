@@ -1,0 +1,3 @@
+https://pjreddie.com/media/files/darknet19.weights
+(or)
+https://drive.google.com/uc?export=view&id=1l0P5oT9M3RZzuDNtTwn-Y_Bv8FlmvwGm

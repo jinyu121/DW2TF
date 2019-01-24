@@ -4,10 +4,18 @@ This is a simple converter which converts:
 - Darknet weights (`.weights`) to TensorFlow weights (`.ckpt`)
 - Darknet model (`.cfg`) to TensorFlow graph (`.pb`, `.meta`)
 
-
 ## Use it
 
-#### Yolo-v2
+For a full list of options:
+```
+python3 main.py -h
+```
+
+Provide optional argument `--training` to generate training graph (uses batch norm in training mode).
+
+### Object Detection Networks
+
+#### yolo-v2
 ```
 python3 main.py \
     --cfg 'data/yolov2.cfg' \
@@ -17,7 +25,7 @@ python3 main.py \
     --gpu 0
 ```
 
-#### Yolo-v3
+#### yolo-v3
 ```
 python3 main.py \
     --cfg 'data/yolov3.cfg' \
@@ -27,13 +35,27 @@ python3 main.py \
     --gpu 0
 ```
 
-Provide optional argument `--training` to generate training graph (uses training version of batch norm).
+### Image Classification Networks
 
-For a full list of options:
+#### darknet19
 ```
-python3 main.py -h
+python3 main.py \
+    --cfg 'data/darknet19.cfg' \
+    --weights 'data/darknet19.weights' \
+    --output 'data/' \
+    --prefix 'darknet19/' \
+    --gpu 0
 ```
 
+#### darknet19_448
+```
+python3 main.py \
+    --cfg 'data/darknet19_448.cfg' \
+    --weights 'data/darknet19_448.weights' \
+    --output 'data/' \
+    --prefix 'darknet19_448/' \
+    --gpu 0
+```
 
 ## Todo
 

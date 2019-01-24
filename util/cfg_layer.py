@@ -108,6 +108,20 @@ def cfg_maxpool(B, H, W, C, net, param, weights_walker, stack, output_index, sco
     return net
 
 
+def cfg_avgpool(B, H, W, C, net, param, weights_walker, stack, output_index, scope, training, const_inits, verbose):
+    # Darknet uses only global avgpool (no stride, kernel size == input size)
+    # Reference:
+    # https://github.com/pjreddie/darknet/blob/61c9d02ec461e30d55762ec7669d6a1d3c356fb2/src/avgpool_layer.c#L7
+    assert len(param) == 1, "Expected global avgpool; no stride / size param but got param=%s" % param
+    pool_args = {
+        "pool_size": (H, W),
+        "strides": 1
+    }
+
+    net = tf.layers.average_pooling2d(net, name=scope, **pool_args)
+    return net
+
+
 def cfg_route(B, H, W, C, net, param, weights_walker, stack, output_index, scope, training, const_inits, verbose):
     if not isinstance(param["layers"], list):
         param["layers"] = [param["layers"]]
@@ -150,6 +164,12 @@ def cfg_upsample(B, H, W, C, net, param, weights_walker, stack, output_index, sc
     return net
 
 
+def cfg_softmax(B, H, W, C, net, param, weights_walker, stack, output_index, scope, training, const_inits, verbose):
+    net = tf.squeeze(net, axis=[1, 2], name=scope+'/Squeeze')
+    net = tf.nn.softmax(net, name=scope+'/Softmax')
+    return net
+
+
 def cfg_ignore(B, H, W, C, net, param, weights_walker, stack, output_index, scope, training, const_inits, verbose):
     if verbose:
         print("=> Ignore: ", param)
@@ -161,11 +181,13 @@ _cfg_layer_dict = {
     "net": cfg_net,
     "convolutional": cfg_convolutional,
     "maxpool": cfg_maxpool,
+    "avgpool": cfg_avgpool,
     "route": cfg_route,
     "reorg": cfg_reorg,
     "shortcut": cfg_shortcut,
     "yolo": cfg_yolo,
-    "upsample": cfg_upsample
+    "upsample": cfg_upsample,
+    "softmax": cfg_softmax
 }
 
 

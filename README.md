@@ -15,7 +15,7 @@ Provide optional argument `--training` to generate training graph (uses batch no
 
 ### Object Detection Networks
 
-#### yolo-v2
+#### yolov2
 ```
 python3 main.py \
     --cfg 'data/yolov2.cfg' \
@@ -25,13 +25,33 @@ python3 main.py \
     --gpu 0
 ```
 
-#### yolo-v3
+#### yolov2-tiny
+```
+python3 main.py \
+    --cfg 'data/yolov2-tiny.cfg' \
+    --weights 'data/yolov2-tiny.weights' \
+    --output 'data/' \
+    --prefix 'yolov2-tiny/' \
+    --gpu 0
+```
+
+#### yolov3
 ```
 python3 main.py \
     --cfg 'data/yolov3.cfg' \
     --weights 'data/yolov3.weights' \
     --output 'data/' \
     --prefix 'yolov3/' \
+    --gpu 0
+```
+
+#### yolov3-tiny
+```
+python3 main.py \
+    --cfg 'data/yolov3-tiny.cfg' \
+    --weights 'data/yolov3-tiny.weights' \
+    --output 'data/' \
+    --prefix 'yolov3-tiny/' \
     --gpu 0
 ```
 

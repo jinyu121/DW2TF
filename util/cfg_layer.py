@@ -101,7 +101,8 @@ def cfg_convolutional(B, H, W, C, net, param, weights_walker, stack, output_inde
 def cfg_maxpool(B, H, W, C, net, param, weights_walker, stack, output_index, scope, training, const_inits, verbose):
     pool_args = {
         "pool_size": int(param['size']),
-        "strides": int(param['stride'])
+        "strides": int(param['stride']),
+        "padding": 'same'
     }
 
     net = tf.layers.max_pooling2d(net, name=scope, **pool_args)

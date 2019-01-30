@@ -20,6 +20,7 @@ def parse_net(num_layers, cfg, weights, training=False, const_inits=True, verbos
     cfg_walker = CFGReader(cfg)
     weights_walker = WeightsReader(weights)
     output_index = []
+    num_layers = int(num_layers)
 
     for ith, layer in enumerate(cfg_walker):
         if ith > num_layers and num_layers > 0:

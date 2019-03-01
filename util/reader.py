@@ -4,8 +4,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import numpy as np
 import os
+import ctypes
+import numpy as np
+
 import tensorflow as tf
 
 
@@ -29,7 +31,6 @@ class WeightsReader:
             major, minor, revision = np.memmap(path, shape=(), mode='r', offset=0, dtype='({})i4,'.format(3))
             self.transpose = major > 1000 or minor > 1000
             if ((major*10 + minor) >= 2 and major < 1000 and minor < 1000):
-                import ctypes
                 self.offset = 12 + ctypes.sizeof(ctypes.c_size_t)
             else:
                 self.offset = 16

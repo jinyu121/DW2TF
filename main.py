@@ -95,12 +95,12 @@ def main(args):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('--cfg', default="data/yolov2.cfg", help='Darknet .cfg file')
-    parser.add_argument('--weights', default='data/yolov2.weights', help='Darknet .weights file')
+    parser.add_argument('--cfg', default='data/network.cfg', help='Darknet .cfg file')
+    parser.add_argument('--weights', default='data/network.weights', help='Darknet .weights file')
     parser.add_argument('--output', default='data/', help='Output folder')
-    parser.add_argument('--prefix', default='yolov2/', help='Import scope prefix')
+    parser.add_argument('--prefix', default='network/', help='Import scope prefix')
     parser.add_argument('--layers', default=0, help='How many layers, 0 means all')
-    parser.add_argument('--gpu', '-g', default='0', help='GPU')
+    parser.add_argument('--gpu', '-g', default='', help='GPU')
     parser.add_argument('--training', dest='training', action='store_true', help='Save training mode graph')
     args = parser.parse_args()
 

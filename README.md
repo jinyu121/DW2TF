@@ -4,6 +4,10 @@ This is a simple converter which converts:
 - Darknet weights (`.weights`) to TensorFlow weights (`.ckpt`)
 - Darknet model (`.cfg`) to TensorFlow graph (`.pb`, `.meta`)
 
+## Requirements
+- Ubuntu
+- Python 3.6 (known issues with Python 3.7)
+
 ## Use it
 
 For a full list of options:

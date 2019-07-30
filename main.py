@@ -35,7 +35,7 @@ def parse_net(num_layers, cfg, weights, training=False, const_inits=True, verbos
         # See https://github.com/jinyu121/DW2TF/issues/30
         # See https://github.com/AlexeyAB/darknet/issues/487#issuecomment-374902735
         if layer['name'] != 'net':
-          stack.append(net)
+            stack.append(net)
         if verbose:
             print(ith, net)
 

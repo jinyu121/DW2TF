@@ -31,7 +31,11 @@ def parse_net(num_layers, cfg, weights, training=False, const_inits=True, verbos
         scope = "{}{}{}".format(args.prefix, layer['name'], counters[layer_name])
         net = get_cfg_layer(net, layer_name, layer, weights_walker, stack, output_index, scope,
                             training=training, const_inits=const_inits, verbose=verbose)
-        stack.append(net)
+        # Exclude `net` layer from stack (for correct layer indexing)
+        # See https://github.com/jinyu121/DW2TF/issues/30
+        # See https://github.com/AlexeyAB/darknet/issues/487#issuecomment-374902735
+        if layer['name'] != 'net':
+          stack.append(net)
         if verbose:
             print(ith, net)
 

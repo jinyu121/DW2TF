@@ -16,7 +16,9 @@ _BATCH_NORM_EPSILON = 1e-05
 
 _activation_dict = {
     'leaky': lambda x, y: tf.nn.leaky_relu(x, name=y, alpha=_LEAKY_RELU_ALPHA),
-    'relu': lambda x, y: tf.nn.relu(x, name=y)
+    'relu': lambda x, y: tf.nn.relu(x, name=y),
+    'swish': lambda x, y: x * tf.nn.sigmoid(x, name=y),
+    'logistic': lambda x, y: tf.nn.sigmoid(x, name=y)
 }
 
 
@@ -38,10 +40,19 @@ def cfg_convolutional(B, H, W, C, net, param, weights_walker, stack, output_inde
     size = int(param['size'])
     filters = int(param['filters'])
     stride = int(param['stride'])
-    pad = 'same' if param['pad'] == '1' else 'valid'
-    activation = None
-    weight_size = C * filters * size * size
 
+    if 'groups' in param:
+        groups = int(param['groups'])
+    else:
+        groups = 1
+
+    if 'pad' in param:
+        pad = 'same' if param['pad'] == '1' else 'valid'
+    else:
+        pad = 'valid'
+    activation = None
+    weight_size = C * int(filters / groups) * size * size
+    
     if "activation" in param:
         activation = _activation_dict.get(param['activation'], None)
 
@@ -50,28 +61,57 @@ def cfg_convolutional(B, H, W, C, net, param, weights_walker, stack, output_inde
                                   filters=filters,
                                   weight_size=weight_size,
                                   batch_normalize=batch_normalize)
-    weights = weights.reshape(filters, C, size, size).transpose([2, 3, 1, 0])
+    weights = weights.reshape(int(filters/ groups), C, size, size).transpose([2, 3, 1, 0])
 
-    conv_args = {
-        "filters": filters,
-        "kernel_size": size,
-        "strides": stride,
-        "activation": None,
-        "padding": pad
-    }
+    if groups > 1:
+        if 'pad' in param:
+            pad = 'SAME' if param['pad'] == '1' else 'VALID'
+        else:
+            pad = 'VALID'
+        conv_args = {
+            "strides": [1, stride, stride, 1],
+            "padding": pad,
+        }
 
-    if const_inits:
-        conv_args.update({
-            "kernel_initializer": tf.initializers.constant(weights, verify_shape=True),
-            "bias_initializer": tf.initializers.constant(biases, verify_shape=True)
-        })
+        if stride == 2:
+            conv_args.update({
+                "padding": 'VALID'
+            })
+            paddings = tf.constant([[0, 0], [int(size/2), int(size/2)], [int(size/2), int(size/2)], [0, 0]])
+            net = tf.pad(net, paddings)
 
-    if batch_normalize:
-        conv_args.update({
-            "use_bias": False
-        })
+        net = tf.nn.depthwise_conv2d(net, weights, **conv_args)
+        if not batch_normalize:
+            net = tf.nn.bias_add(net, biases)
+    else:
+        
+        conv_args = {
+            "filters": filters,
+            "kernel_size": size,
+            "strides": stride,
+            "activation": None,
+            "padding": pad,
+        }
 
-    net = tf.layers.conv2d(net, name=scope, **conv_args)
+        if const_inits:
+            conv_args.update({
+                "kernel_initializer": tf.initializers.constant(weights, verify_shape=True),
+                "bias_initializer": tf.initializers.constant(biases, verify_shape=True)
+            })
+
+        if batch_normalize:
+            conv_args.update({
+                "use_bias": False
+            })
+
+        if stride == 2:
+            conv_args.update({
+                "padding": 'valid'
+            })
+            paddings = tf.constant([[0, 0], [int(size/2), int(size/2)], [int(size/2), int(size/2)], [0, 0]])
+            net = tf.pad(net, paddings)
+        
+        net = tf.layers.conv2d(net, name=scope, **conv_args)
 
     if batch_normalize:
         batch_norm_args = {
@@ -145,7 +185,7 @@ def cfg_reorg(B, H, W, C, net, param, weights_walker, stack, output_index, scope
 def cfg_shortcut(B, H, W, C, net, param, weights_walker, stack, output_index, scope, training, const_inits, verbose):
     index = int(param['from'])
     activation = param['activation']
-    assert activation == 'linear'
+    # assert activation == 'linear'
 
     from_layer = stack[index]
     net = tf.add(net, from_layer, name=scope)
@@ -176,8 +216,14 @@ def cfg_ignore(B, H, W, C, net, param, weights_walker, stack, output_index, scop
         print("=> Ignore: ", param)
 
     return net
-
-
+def cfg_scale_channels(B, H, W, C, net, param, weights_walker, stack, output_index, scope, training, const_inits, verbose):
+    index = int(param['from'])
+    
+    from_layer = stack[index]
+    net = tf.reshape(net, [-1, 1, 1, net.shape[-1]])
+    net = from_layer * net
+    return net
+    
 _cfg_layer_dict = {
     "net": cfg_net,
     "convolutional": cfg_convolutional,
@@ -188,7 +234,8 @@ _cfg_layer_dict = {
     "shortcut": cfg_shortcut,
     "yolo": cfg_yolo,
     "upsample": cfg_upsample,
-    "softmax": cfg_softmax
+    "softmax": cfg_softmax,
+    "scale_channels": cfg_scale_channels
 }
 
 

@@ -39,9 +39,10 @@ def cfg_convolutional(B, H, W, C, net, param, weights_walker, stack, output_inde
     size = int(param['size'])
     filters = int(param['filters'])
     stride = int(param['stride'])
+    groups = int(param.get('groups',1))
     pad = 'same' if param['pad'] == '1' else 'valid'
     activation = None
-    weight_size = C * filters * size * size
+    weight_size = int(C/groups) * filters * size * size
 
     if "activation" in param:
         activation = _activation_dict.get(param['activation'], None)
@@ -51,7 +52,7 @@ def cfg_convolutional(B, H, W, C, net, param, weights_walker, stack, output_inde
                                   filters=filters,
                                   weight_size=weight_size,
                                   batch_normalize=batch_normalize)
-    weights = weights.reshape(filters, C, size, size).transpose([2, 3, 1, 0])
+    weights = weights.reshape(filters, int(C/groups), size, size).transpose([2, 3, 1, 0])
 
     conv_args = {
         "filters": filters,

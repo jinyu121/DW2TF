@@ -4,7 +4,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
 from layer.reorg_layer import reorg_layer
 
@@ -98,6 +99,12 @@ def cfg_convolutional(B, H, W, C, net, param, weights_walker, stack, output_inde
     return net
 
 
+def cfg_dropout(B, H, W, C, net, param, weights_walker, stack, output_index, scope, training, const_inits, verbose):
+
+    net = tf.layers.dropout(net,rate=param['probability'],  training=training)
+    return net
+
+
 def cfg_maxpool(B, H, W, C, net, param, weights_walker, stack, output_index, scope, training, const_inits, verbose):
     pool_args = {
         "pool_size": int(param['size']),
@@ -188,6 +195,7 @@ _cfg_layer_dict = {
     "shortcut": cfg_shortcut,
     "yolo": cfg_yolo,
     "upsample": cfg_upsample,
+    "dropout": cfg_dropout,
     "softmax": cfg_softmax
 }
 

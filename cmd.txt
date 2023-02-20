@@ -1,0 +1,1 @@
+python3 main.py --cfg 'data/yolo-fastest-1.1_IR_small_1chan_v1.cfg' --weights 'data/yolo-fastest-1.1_IR_small_1chan_v1_LeiData_top.weights' --output 'data/' --prefix 'yolo/' --gpu 0

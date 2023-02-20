@@ -7,7 +7,8 @@ from __future__ import print_function
 from argparse import ArgumentParser
 
 import os
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
 from util.cfg_layer import get_cfg_layer
 from util.reader import WeightsReader, CFGReader
@@ -19,6 +20,7 @@ def parse_net(num_layers, cfg, weights, training=False, const_inits=True, verbos
     stack = []
     cfg_walker = CFGReader(cfg)
     weights_walker = WeightsReader(weights)
+    print("weights_walker:",weights_walker)
     output_index = []
     num_layers = int(num_layers)
 
@@ -54,6 +56,7 @@ def main(args):
     # graph.pb or graph.meta is huge (contains weights).
     # ----------------------------------------------------------
     tf.reset_default_graph()
+    #tf.compat.v1.reset_default_graph()
     parse_net(args.layers, args.cfg, args.weights, args.training)
     graph = tf.get_default_graph()
 

@@ -76,12 +76,20 @@ class CFGReader:
             if len(line) > 0:
                 yield (line.strip())
         yield "[]"  # Yield a dummy block
+        
 
     def get_block(self):
         line_getter = self._get_line()
         obj = None
         while True:
             line = next(line_getter)
+            if line == "[]":
+                # 读不到数据，那么就通知enumerate退出迭代。
+                # 可能早期的版本 enumerate 可以自己捕获 StopIteration ，所以让他抛出异常也可以运行下去
+                # 3.8版本 enumerate 不能自己捕获 StopIteration，会导致程序退出。所以这里要明确的break才行 
+                break
+
+            #print("line:",line)
             if line.startswith('['):
                 line = line.strip('[').strip("]")
                 if obj:  # Yield previous block first
